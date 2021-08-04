@@ -26,7 +26,7 @@ const authJwt= (req, res, next)=> {
         console.log("Token Not Recieved !");
        return res.status(403).send({message:"Token Not Recieved !"});
     }
-}
+}   
 
 router.get("/getAllContact", authJwt,contactController.getAllContact);
 

@@ -34,6 +34,7 @@ const bcrypt = require("bcrypt");
 exports.createContact = (req, res) =>{
     console.log("Create Contact Hits");
     const contact = req.body;
+    
     if(!contact){
         console.log("Contact Not Recieved !");
         return res.json({
@@ -42,10 +43,10 @@ exports.createContact = (req, res) =>{
     }
 
     const query = `INSERT INTO pq_addcontact  
-    (name, mobile, email, address, isdelete, image, createdAt, createdBy) 
+    (name, mobile, email, address, country, isdelete, image, createdAt, createdBy) 
     VALUES  
-    ( ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const queryOptions = [contact.firstname, contact.mobile, contact.email, contact.address, contact.isdeleted, contact.image, new Date(), contact.createdBy];
+    ( ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const queryOptions = [contact.firstname, contact.mobile, contact.email, contact.address, contact.country, contact.isdeleted, contact.image, new Date(), contact.createdBy];
     sql.query(query, queryOptions,(err, results)=>{
         if(err){
             console.log("DB ERROR - "+err);
@@ -225,7 +226,7 @@ exports.updateContact = (req,res)=>{
 
     console.log("Update Contact hits..");
     const contact = req.body;
-    const query = `update pq_addcontact set name ='${contact.firstname}', mobile = ${contact.mobile}, email = '${contact.email}', address = '${contact.address}' where id = ${contact.id}`;
+    const query = `update pq_addcontact set name ='${contact.firstname}', mobile = ${contact.mobile}, email = '${contact.email}', address = '${contact.address}', country = '${contact.country}' where id = ${contact.id}`;
 
     sql.query(query, (err, results)=>{
         if(err){
