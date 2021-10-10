@@ -1,10 +1,15 @@
 const bcrypt = require("bcrypt");
   const sql = require("../config/dbconfig");
   const express = require("express");
+  var nodemailer = require('nodemailer');
+  const fs = require("fs");
+
   const router = express.Router();
   const jwt = require("jsonwebtoken");
   require('dotenv').config();  
+  var vCardsJS = require('vcards-js');
 
+  
   exports.getAllContact = (req,res) =>  {
     const id = req.token.id;
     const name = req.token.username;
@@ -41,7 +46,7 @@ exports.createContact = (req, res) =>{
             Error : "Contact Not Recieved !"
         });
     }
-
+   
     const query = `INSERT INTO pq_addcontact  
     (name, mobile, email, address, country, isdelete, image, createdAt, createdBy) 
     VALUES  
@@ -60,20 +65,63 @@ exports.createContact = (req, res) =>{
                 Error : "DB Result is Null"
             });
         }
-
         return res.status(200).json({
             message : "Contact Saved Successfully !!"
         })
     });
     console.log("CreateContact Hits");
+
 }
+
+function writeToCSVFile(users, req, res) {
+    const filename = 'contacts.csv';
+    fs.writeFile(filename, extractAsCSV(users), err => {
+      if (err) {
+        console.log('Error writing to csv file', err);
+      } else {
+        res.download(filename, (err) => {
+            if (err) {
+              res.status(500).send({
+                message: "Could not download the file. " + err,
+              });
+            }
+          });
+
+        console.log(`saved as ${filename}`);
+      }
+    });
+  }
+  
+  function extractAsCSV(users) {
+    const header = ["Name, Email, Mobile , Address, Country"];
+    const rows = users.map(user =>
+       `${user.name}, ${user.email}, ${user.mobile}, ${user.address}, ${user.country}, `
+    );
+    return header.concat(rows).join("\n");
+  }
+
 
 
 exports.newUser = async(req,res)=>{
     console.log("Sign Up Hits");
-    const user = req.body;
 
-    const query = `INSERT INTO pq_signup 
+    const user = req.body;
+    const check = `select * from pq_signup where email = '${user.email}'`;
+    sql.query(check , async(err, results)=>{
+        if(err){
+            return res.json({
+                err : "Error Occured in check query"
+            })
+        }
+        if(results != ""){
+
+            console.log(results);
+            return res.json({
+                    errmsg : "Email is Already Registered !"
+                });
+            
+        }else if(results == ""){
+            const query = `INSERT INTO pq_signup 
     (first, last, email, password, createdAt, isDeleted) 
     VALUES  
     ( ?, ?, ?, ?, ?, ?)`;
@@ -101,6 +149,13 @@ exports.newUser = async(req,res)=>{
                 message : "You're Registered Successfully ! Please log in.."
             })
     });    
+
+        }
+        // return;
+    });
+
+
+    
     
 }
 
@@ -218,7 +273,6 @@ exports.singleContact = (req,res) =>{
             contact : results
         });
     });
-
 }
 
 
@@ -247,3 +301,118 @@ exports.updateContact = (req,res)=>{
         });
     });
 }
+
+
+exports.checkPassword = (req,res) =>{
+    console.log("Change Password Hits !");
+    const {password , id } = req.body;
+    
+    const query = `select * from pq_signup where id = ${id}`;
+
+    sql.query(query, async(err, results)=>{
+        if(err){
+            console.log("DB Error "+err);
+            return res.json({
+                Error : "DB Error - "+err
+            });
+        }
+        try{
+            const isMatch = await bcrypt.compare(password, results[0].password);
+            if(!isMatch){
+                console.log("Invalid Password !");
+                return res.json({
+                    err : "Invalid Password ",
+                    status : 0
+                })
+            }else{
+                console.log("password Correct !");
+                return res.json({
+                    msg : "Password Validated !",
+                    status : 1
+                });
+            }
+        }catch{
+            console.log("bcrypt Error");
+        }
+    });
+}
+
+exports.changePassword = async(req, res)=>{
+    console.log("Change HITS");
+
+    const {newPass, id} = req.body;
+    const hashNew = await bcrypt.hash(newPass,12);
+
+    const query = `update pq_signup set password = '${hashNew}' where id = ${id}`;
+
+    sql.query(query , (err, results) =>{
+        if(err){
+            console.log(err);
+            return res.json({
+                error : "Db error "+err,
+                status : 0
+            });
+        }
+        if(results){
+            return res.json({
+                msg : "Password updated Successfully !"
+            });
+        }
+    });
+
+}
+
+exports.csvFile = ( req, res )=> {
+    
+    const uid = req.query.id;
+
+    const query = `SELECT * FROM pq_addcontact WHERE createdBy=${uid}`;
+
+    sql.query(query , (err, results)=>{
+        if(err){
+            console.log("Error - "+err);
+            return res.json({
+                err : "DB Error - "+err
+            });
+        }
+        if(results == ""){
+            return res.json({
+                msg : "No Contact Found !"
+            });
+        }else if(results){
+            writeToCSVFile(results, req, res);
+            
+        }
+
+});
+ }
+ 
+//  vCard.saveToFile('./newContact3.vcf');
+// var vCard = require('vcards-js');
+ 
+//create a new vCard
+// vCard = vCard();
+ 
+//set properties
+// vCard.firstName = 'Eric';
+// vCard.middleName = 'J';
+// vCard.lastName = 'Nesser';
+// vCard.organization = 'ACME Corporation';
+// vCard.photo.attachFromUrl('https://avatars2.githubusercontent.com/u/5659221?v=3&s=460', 'JPEG');
+// vCard.workPhone = '312-555-1212';
+// vCard.birthday = new Date('01-01-1985');
+// vCard.title = 'Software Developer';
+// vCard.url = 'https://github.com/enesser';
+// vCard.note = 'Notes on Eric';
+ 
+// //save to file
+// vCard.saveToFile('./eric-nesser2.vcf');
+ 
+//get as formatted string
+
+ 
+        
+ 
+//save to file
+
+    

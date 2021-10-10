@@ -42,4 +42,10 @@ router.get("/singleContact/:cid", authJwt, contactController.singleContact);
 
 router.post("/update", authJwt, contactController.updateContact);
 
+router.post("/checkpass", authJwt, contactController.checkPassword);
+
+router.post("/changepass", authJwt, contactController.changePassword);
+
+router.get("/downloadCsv", contactController.csvFile);
+
 module.exports = router;
